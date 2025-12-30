@@ -6,11 +6,16 @@ import ExerciseCard from './components/ExerciseCard';
 import AnalysisView from './components/AnalysisView';
 import Modal from './components/Modals';
 import { getCoachingTips } from './services/geminiService';
+import { databaseService } from './services/databaseService';
+import { useSession, signIn, signOut } from './lib/auth';
 
 type ViewType = 'DASHBOARD' | 'ANALYSIS';
 type TimeframeType = 'WEEK' | 'MONTH';
 
 const App: React.FC = () => {
+  const { data: session, isPending } = useSession();
+  const user = session?.user;
+
   const [exercises, setExercises] = useState<Exercise[]>(INITIAL_EXERCISES);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -19,6 +24,7 @@ const App: React.FC = () => {
   const [timeframe, setTimeframe] = useState<TimeframeType>('WEEK');
   const [coachTip, setCoachTip] = useState<string>("");
   const [isLoadingTip, setIsLoadingTip] = useState(false);
+  const [isDataLoading, setIsDataLoading] = useState(false);
 
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: 'Atleta Evolution',
@@ -28,45 +34,108 @@ const App: React.FC = () => {
   });
   const [showExportModal, setShowExportModal] = useState(false);
 
-  const handleAddExercise = (newEx: Omit<Exercise, 'id' | 'progress'>) => {
-    const ex: Exercise = {
-      ...newEx,
-      id: Math.random().toString(36).substr(2, 9),
-      progress: Math.floor(Math.random() * 40) + 60,
-      history: []
-    };
-    setExercises([...exercises, ex]);
+  // Carregar dados quando houver sessão
+  useEffect(() => {
+    if (user) {
+      loadUserData();
+    }
+  }, [user]);
+
+  const loadUserData = async () => {
+    if (!user) return;
+    setIsDataLoading(true);
+    try {
+      const dbProfile = await databaseService.getUserProfile(user.id);
+      if (dbProfile) setUserProfile(dbProfile);
+
+      const dbExercises = await databaseService.getExercises(user.id);
+      if (dbExercises.length > 0) setExercises(dbExercises);
+
+      const dbGoals = await databaseService.getGoals(user.id);
+      setGoals(dbGoals);
+    } catch (error) {
+      console.error("Erro ao carregar dados do Neon:", error);
+    } finally {
+      setIsDataLoading(false);
+    }
   };
 
-  const handleUpdateExercise = (updatedData: Omit<Exercise, 'id' | 'progress' | 'history'>) => {
+  const handleAddExercise = async (newEx: Omit<Exercise, 'id' | 'progress'>) => {
+    if (!user) {
+      // Fallback offline se não logado
+      const ex: Exercise = {
+        ...newEx,
+        id: Math.random().toString(36).substr(2, 9),
+        progress: 60,
+        history: [],
+        avgVolume: 0,
+        lastWeight: 0,
+        lastDate: '-',
+        pbWeight: 0,
+        pbDate: '-'
+      };
+      setExercises([...exercises, ex]);
+      return;
+    }
+
+    try {
+      const ex = await databaseService.addExercise(user.id, newEx as any);
+      setExercises([ex, ...exercises]);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleUpdateExercise = async (updatedData: Omit<Exercise, 'id' | 'progress' | 'history'>) => {
     if (!selectedExercise) return;
 
-    setExercises(prev => prev.map(ex => {
-      if (ex.id === selectedExercise.id) {
-        const newHistory: WeightLog[] = [...(ex.history || [])];
-
-        // Verifica se a carga mudou para adicionar ao log
-        if (updatedData.lastWeight !== ex.lastWeight) {
-          newHistory.unshift({ weight: ex.lastWeight, date: ex.lastDate, type: 'LOAD' });
+    if (user) {
+      try {
+        // Logar nova carga se mudou
+        if (updatedData.lastWeight !== selectedExercise.lastWeight) {
+          await databaseService.addWeightLog(selectedExercise.id, {
+            weight: updatedData.lastWeight,
+            type: 'LOAD'
+          });
         }
-        // Verifica se o RP mudou para adicionar ao log
-        if (updatedData.pbWeight !== ex.pbWeight) {
-          newHistory.unshift({ weight: ex.pbWeight, date: ex.pbDate, type: 'PR' });
+        if (updatedData.pbWeight !== selectedExercise.pbWeight) {
+          await databaseService.addWeightLog(selectedExercise.id, {
+            weight: updatedData.pbWeight,
+            type: 'PR'
+          });
         }
-
-        return {
-          ...ex,
-          ...updatedData,
-          history: newHistory.slice(0, 3) // Mantém apenas as últimas 3 modificações
-        };
+        await loadUserData(); // Recarrega para ter os dados frescos
+      } catch (e) {
+        console.error(e);
       }
-      return ex;
-    }));
+    } else {
+      // Lógica local antiga
+      setExercises(prev => prev.map(ex => {
+        if (ex.id === selectedExercise.id) {
+          const newHistory: WeightLog[] = [...(ex.history || [])];
+          if (updatedData.lastWeight !== ex.lastWeight) {
+            newHistory.unshift({ weight: ex.lastWeight, date: ex.lastDate, type: 'LOAD' });
+          }
+          if (updatedData.pbWeight !== ex.pbWeight) {
+            newHistory.unshift({ weight: ex.pbWeight, date: ex.pbDate, type: 'PR' });
+          }
+          return { ...ex, ...updatedData, history: newHistory.slice(0, 3) };
+        }
+        return ex;
+      }));
+    }
     setSelectedExercise(null);
   };
 
-  const handleDeleteExercise = (id: string) => {
-    setExercises(exercises.filter(ex => ex.id !== id));
+  const handleDeleteExercise = async (id: string) => {
+    if (user) {
+      try {
+        await databaseService.deleteExercise(id);
+        setExercises(exercises.filter(ex => ex.id !== id));
+      } catch (e) { console.error(e); }
+    } else {
+      setExercises(exercises.filter(ex => ex.id !== id));
+    }
   };
 
   const handleEditRequest = (ex: Exercise) => {
@@ -74,12 +143,19 @@ const App: React.FC = () => {
     setActiveModal('EDIT_EXERCISE');
   };
 
-  const handleAddGoal = (newGoal: Omit<Goal, 'id'>) => {
-    const goal: Goal = {
-      ...newGoal,
-      id: Math.random().toString(36).substr(2, 9),
-    };
-    setGoals([...goals, goal]);
+  const handleAddGoal = async (newGoal: Omit<Goal, 'id'>) => {
+    if (user) {
+      try {
+        const goal = await databaseService.addGoal(user.id, newGoal);
+        setGoals([goal, ...goals]);
+      } catch (e) { console.error(e); }
+    } else {
+      const goal: Goal = {
+        ...newGoal,
+        id: Math.random().toString(36).substr(2, 9),
+      };
+      setGoals([...goals, goal]);
+    }
   };
 
   const handleOpenCoach = async () => {
@@ -355,6 +431,15 @@ const App: React.FC = () => {
     avgVolume: timeframe === 'WEEK' ? ex.avgVolume : parseFloat((ex.avgVolume * 4.3).toFixed(1))
   }));
 
+  const handleUpdateProfile = async (profile: UserProfile) => {
+    if (user) {
+      try {
+        await databaseService.updateUserProfile(user.id, profile);
+      } catch (e) { console.error(e); }
+    }
+    setUserProfile(profile);
+  };
+
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
@@ -394,25 +479,43 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          <div
-            onClick={() => setActiveModal('PROFILE')}
-            className="flex items-center gap-3 cursor-pointer group"
-          >
-            <div className="hidden sm:flex flex-col items-end">
-              <span className="text-white font-bold text-xs uppercase font-mono group-hover:text-primary transition-colors">{userProfile.name}</span>
-              <span className="text-[9px] text-text-muted font-mono uppercase tracking-tighter">{userProfile.level}</span>
-            </div>
-            <div className="size-9 bg-surface-dark border border-border-dark flex items-center justify-center text-xs font-mono font-bold text-primary overflow-hidden hover:border-primary transition-all relative">
-              {userProfile.photo ? (
-                <img src={userProfile.photo} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                getInitials(userProfile.name)
-              )}
-              <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                <span className="material-symbols-outlined text-sm text-black font-bold">edit</span>
+          {!user && !isPending && (
+            <button
+              onClick={() => signIn.social({ provider: 'google' })}
+              className="px-4 py-2 bg-primary text-black font-bold text-xs uppercase font-mono shadow-glow"
+            >
+              Login
+            </button>
+          )}
+
+          {user && (
+            <div
+              onClick={() => setActiveModal('PROFILE')}
+              className="flex items-center gap-3 cursor-pointer group"
+            >
+              <div className="hidden sm:flex flex-col items-end">
+                <span className="text-white font-bold text-xs uppercase font-mono group-hover:text-primary transition-colors">{userProfile.name}</span>
+                <span className="text-[9px] text-text-muted font-mono uppercase tracking-tighter">{userProfile.level}</span>
               </div>
+              <div className="size-9 bg-surface-dark border border-border-dark flex items-center justify-center text-xs font-mono font-bold text-primary overflow-hidden hover:border-primary transition-all relative">
+                {userProfile.photo ? (
+                  <img src={userProfile.photo} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  getInitials(userProfile.name)
+                )}
+                <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <span className="material-symbols-outlined text-sm text-black font-bold">edit</span>
+                </div>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); signOut(); }}
+                className="ml-2 text-text-muted hover:text-red-500 transition-colors"
+                title="Sair"
+              >
+                <span className="material-symbols-outlined text-sm">logout</span>
+              </button>
             </div>
-          </div>
+          )}
         </div>
       </header>
 
@@ -508,7 +611,16 @@ const App: React.FC = () => {
                         <h4 className="text-white text-lg font-bold uppercase mb-2">{goal.title}</h4>
                         <p className="text-text-muted font-mono text-sm">{goal.description}</p>
                         <button
-                          onClick={() => setGoals(goals.filter(g => g.id !== goal.id))}
+                          onClick={async () => {
+                            if (user) {
+                              try {
+                                await databaseService.deleteGoal(goal.id);
+                                setGoals(goals.filter(g => g.id !== goal.id));
+                              } catch (e) { console.error(e); }
+                            } else {
+                              setGoals(goals.filter(g => g.id !== goal.id));
+                            }
+                          }}
                           className="absolute top-4 right-4 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500 print:hidden"
                         >
                           <span className="material-symbols-outlined">delete</span>
@@ -580,7 +692,7 @@ const App: React.FC = () => {
         coachTip={coachTip}
         isLoadingTip={isLoadingTip}
         userProfile={userProfile}
-        onUpdateProfile={setUserProfile}
+        onUpdateProfile={handleUpdateProfile}
         selectedExercise={selectedExercise}
       />
 
