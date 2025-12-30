@@ -523,10 +523,22 @@ const App: React.FC = () => {
         <div className="flex items-center gap-4">
           {!user && !isPending && (
             <button
-              onClick={() => signIn.social({
-                provider: 'google',
-                callbackURL: window.location.origin
-              })}
+              onClick={async () => {
+                console.log("Iniciando login social...");
+                try {
+                  await signIn.social({
+                    provider: 'google',
+                    fetchOptions: {
+                      headers: {
+                        "x-better-auth-project-id": (import.meta as any).env.VITE_NEON_PROJECT_ID,
+                        "x-neon-project-id": (import.meta as any).env.VITE_NEON_PROJECT_ID
+                      }
+                    }
+                  });
+                } catch (err) {
+                  console.error("Erro no login:", err);
+                }
+              }}
               className="px-4 py-2 bg-primary text-black font-bold text-xs uppercase font-mono shadow-glow"
             >
               Login
