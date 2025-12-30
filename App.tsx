@@ -25,6 +25,7 @@ const App: React.FC = () => {
   const [coachTip, setCoachTip] = useState<string>("");
   const [isLoadingTip, setIsLoadingTip] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
 
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: 'Atleta Evolution',
@@ -34,27 +35,53 @@ const App: React.FC = () => {
   });
   const [showExportModal, setShowExportModal] = useState(false);
 
-  // Carregar dados quando houver sessão
+
+  // Carregar dados e configurar segurança quando houver sessão
   useEffect(() => {
+    if (session?.session?.token) {
+      // Configura o banco de dados para usar o token JWT do usuário atual
+      // Isso habilita o RLS e remove a necessidade de senhas no frontend
+      databaseService.setToken(session.session.token);
+    } else {
+      databaseService.setToken(null);
+    }
+
     if (user) {
       loadUserData();
+
+      // Limpa os parâmetros da URL (como neon_auth_session_verifier) para segurança e estética
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('neon_auth_session_verifier')) {
+        url.searchParams.delete('neon_auth_session_verifier');
+        window.history.replaceState({}, '', url.toString());
+      }
     }
-  }, [user]);
+  }, [user, session]);
 
   const loadUserData = async () => {
     if (!user) return;
     setIsDataLoading(true);
     try {
       const dbProfile = await databaseService.getUserProfile(user.id);
-      if (dbProfile) setUserProfile(dbProfile);
+      if (dbProfile) {
+        setUserProfile(dbProfile);
+      } else if (user.name) {
+        // Se não houver perfil no banco, usa os dados básicos da conta
+        setUserProfile(prev => ({
+          ...prev,
+          name: user.name || prev.name,
+          photo: user.image || prev.photo
+        }));
+      }
 
       const dbExercises = await databaseService.getExercises(user.id);
-      if (dbExercises.length > 0) setExercises(dbExercises);
+      setExercises(dbExercises);
 
       const dbGoals = await databaseService.getGoals(user.id);
       setGoals(dbGoals);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao carregar dados do Neon:", error);
+      setDataError("Falha na conexão com o banco de dados.");
     } finally {
       setIsDataLoading(false);
     }
@@ -80,9 +107,10 @@ const App: React.FC = () => {
 
     try {
       const ex = await databaseService.addExercise(user.id, newEx as any);
-      setExercises([ex, ...exercises]);
-    } catch (e) {
-      console.error(e);
+      setExercises(prev => [ex, ...prev]);
+    } catch (e: any) {
+      console.error("Erro ao adicionar exercício:", e);
+      alert("Erro ao salvar no banco. Verifique sua conexão.");
     }
   };
 
@@ -444,6 +472,20 @@ const App: React.FC = () => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
 
+  if (isPending) {
+    return (
+      <div className="min-h-screen bg-background-dark flex flex-col items-center justify-center gap-6">
+        <div className="size-20 bg-primary/20 border-2 border-primary flex items-center justify-center animate-pulse">
+          <span className="material-symbols-outlined text-primary text-4xl animate-spin">sync</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <h2 className="text-white text-xl font-bold tracking-widest uppercase">EVOLUTION</h2>
+          <span className="text-[10px] text-primary font-mono tracking-widest uppercase">Validando Sessão Segura...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
@@ -481,7 +523,10 @@ const App: React.FC = () => {
         <div className="flex items-center gap-4">
           {!user && !isPending && (
             <button
-              onClick={() => signIn.social({ provider: 'google' })}
+              onClick={() => signIn.social({
+                provider: 'google',
+                callbackURL: window.location.origin
+              })}
               className="px-4 py-2 bg-primary text-black font-bold text-xs uppercase font-mono shadow-glow"
             >
               Login

@@ -10,19 +10,35 @@ if (!databaseUrl) {
   console.error("ERRO: VITE_DATABASE_URL não encontrada. Certifique-se de que o arquivo .env.local está configurado corretamente.");
 }
 
-const sql = neon(databaseUrl || "");
 
+let sqlClient = neon(databaseUrl || "");
 
 /**
  * SERVIÇO DE BANCO DE DADOS NEON
  * 
  * Este serviço gerencia a persistência de dados no Neon DB.
+ * Agora suporta autenticação via JWT para segurança máxima com RLS.
  */
 
 export const databaseService = {
+  /**
+   * Configura o cliente SQL com um token de autenticação (JWT).
+   * Isso permite que o banco identifique o usuário e aplique as políticas de RLS.
+   */
+  setToken(token: string | null) {
+    if (token) {
+      // Quando usamos token, não precisamos (e nem devemos) enviar a senha no URL
+      // Removemos a parte de usuário/senha da string de conexão se ela existir
+      const cleanUrl = databaseUrl?.replace(/\/\/.*:.*@/, '//');
+      sqlClient = neon(cleanUrl || "", { authToken: token });
+    } else {
+      sqlClient = neon(databaseUrl || "");
+    }
+  },
+
   // --- PERFIL DO USUÁRIO ---
   async getUserProfile(userId: string): Promise<UserProfile | null> {
-    const result = await sql`
+    const result = await sqlClient`
       SELECT name, weight, level, photo_url as photo 
       FROM public.users 
       WHERE id = ${userId}
@@ -31,7 +47,7 @@ export const databaseService = {
   },
 
   async updateUserProfile(userId: string, profile: Partial<UserProfile>): Promise<void> {
-    await sql`
+    await sqlClient`
       UPDATE public.users 
       SET 
         name = COALESCE(${profile.name}, name),
@@ -45,7 +61,7 @@ export const databaseService = {
 
   // --- EXERCÍCIOS ---
   async getExercises(userId: string): Promise<Exercise[]> {
-    const exercises = await sql`
+    const exercises = await sqlClient`
       SELECT id, name, category 
       FROM public.exercises 
       WHERE user_id = ${userId}
@@ -53,7 +69,7 @@ export const databaseService = {
     `;
 
     const fullExercises = await Promise.all(exercises.map(async (ex) => {
-      const logs = await sql`
+      const logs = await sqlClient`
         SELECT weight, date, type 
         FROM public.weight_logs 
         WHERE exercise_id = ${ex.id}
@@ -61,7 +77,7 @@ export const databaseService = {
         LIMIT 10
       `;
 
-      const pb = await sql`
+      const pb = await sqlClient`
         SELECT weight, date 
         FROM public.weight_logs 
         WHERE exercise_id = ${ex.id} AND type = 'PR'
@@ -93,7 +109,7 @@ export const databaseService = {
   },
 
   async addExercise(userId: string, exercise: Omit<Exercise, 'id' | 'progress' | 'avgVolume' | 'lastWeight' | 'lastDate' | 'pbWeight' | 'pbDate'>): Promise<Exercise> {
-    const [newEx] = await sql`
+    const [newEx] = await sqlClient`
       INSERT INTO public.exercises (user_id, name, category)
       VALUES (${userId}, ${exercise.name}, ${exercise.category})
       RETURNING id, name, category
@@ -110,23 +126,23 @@ export const databaseService = {
       avgVolume: 0,
       progress: 0,
       history: []
-    };
+    } as Exercise;
   },
 
   async addWeightLog(exerciseId: string, log: Omit<WeightLog, 'date'>): Promise<void> {
-    await sql`
+    await sqlClient`
       INSERT INTO public.weight_logs (exercise_id, weight, type, date)
       VALUES (${exerciseId}, ${log.weight}, ${log.type}, NOW())
     `;
   },
 
   async deleteExercise(exerciseId: string): Promise<void> {
-    await sql`DELETE FROM public.exercises WHERE id = ${exerciseId}`;
+    await sqlClient`DELETE FROM public.exercises WHERE id = ${exerciseId}`;
   },
 
   // --- METAS ---
   async getGoals(userId: string): Promise<Goal[]> {
-    const result = await sql`
+    const result = await sqlClient`
       SELECT id, title, description 
       FROM public.goals 
       WHERE user_id = ${userId}
@@ -136,7 +152,7 @@ export const databaseService = {
   },
 
   async addGoal(userId: string, goal: Omit<Goal, 'id'>): Promise<Goal> {
-    const [newGoal] = await sql`
+    const [newGoal] = await sqlClient`
       INSERT INTO public.goals (user_id, title, description)
       VALUES (${userId}, ${goal.title}, ${goal.description})
       RETURNING id, title, description
@@ -145,6 +161,7 @@ export const databaseService = {
   },
 
   async deleteGoal(goalId: string): Promise<void> {
-    await sql`DELETE FROM public.goals WHERE id = ${goalId}`;
+    await sqlClient`DELETE FROM public.goals WHERE id = ${goalId}`;
   }
 };
+
