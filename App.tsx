@@ -16,6 +16,7 @@ import CoachModal from './features/coach/components/CoachModal';
 type ViewType = 'DASHBOARD' | 'ANALYSIS';
 type TimeframeType = 'WEEK' | 'MONTH';
 
+
 const App: React.FC = () => {
   // Usuário padrão hardcoded para funcionamento sem Auth
   const user = {
@@ -23,6 +24,13 @@ const App: React.FC = () => {
     name: "Achadoz Agência",
     image: "https://lh3.googleusercontent.com/a/ACg8ocLjq_rYcvuJ8VUPQ38yTvO7pcPHVwzicPAHv6eSTbeG3yeLVXU=s96-c"
   };
+
+  const [isLightMode, setIsLightMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('evolution-theme') === 'light';
+    }
+    return false;
+  });
 
   const {
     exercises,
@@ -50,6 +58,19 @@ const App: React.FC = () => {
   const [coachTip, setCoachTip] = useState<string>("");
   const [isLoadingTip, setIsLoadingTip] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+
+  // Gerenciamento de Tema
+  useEffect(() => {
+    if (isLightMode) {
+      document.documentElement.classList.add('light');
+      localStorage.setItem('evolution-theme', 'light');
+    } else {
+      document.documentElement.classList.remove('light');
+      localStorage.setItem('evolution-theme', 'dark');
+    }
+  }, [isLightMode]);
+
+  const toggleTheme = () => setIsLightMode(!isLightMode);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -165,14 +186,14 @@ const App: React.FC = () => {
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background-dark/95 backdrop-blur-sm border-b border-border-dark px-6 py-4 flex items-center justify-between shadow-lg print:hidden">
+    <div className="min-h-screen flex flex-col bg-background text-text-main transition-colors duration-300">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border px-6 py-4 flex items-center justify-between shadow-lg print:hidden">
         <div className="flex items-center gap-4">
           <div className="size-10 bg-primary flex items-center justify-center border-2 border-transparent shadow-[0_0_10px_rgba(0,240,255,0.4)]">
             <span className="material-symbols-outlined text-black font-black" style={{ fontSize: '24px' }}>fitness_center</span>
           </div>
           <div className="flex flex-col">
-            <h1 className="text-white text-xl font-bold tracking-widest uppercase leading-none">EVOLUTION</h1>
+            <h1 className="text-text-main text-xl font-bold tracking-widest uppercase leading-none">EVOLUTION</h1>
             <span className="text-[10px] text-primary font-mono tracking-widest uppercase">Dashboard de Performance</span>
           </div>
         </div>
@@ -186,12 +207,22 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-4">
+          <button
+            onClick={toggleTheme}
+            className="size-9 bg-surface border border-border flex items-center justify-center text-text-muted hover:text-primary hover:border-primary transition-all"
+            title={isLightMode ? "Ativar Modo Noturno" : "Ativar Modo Claro"}
+          >
+            <span className="material-symbols-outlined text-lg">
+              {isLightMode ? 'dark_mode' : 'light_mode'}
+            </span>
+          </button>
+
           <div onClick={() => setActiveModal('PROFILE')} className="flex items-center gap-3 cursor-pointer group">
             <div className="hidden sm:flex flex-col items-end">
-              <span className="text-white font-bold text-xs uppercase font-mono group-hover:text-primary transition-colors">{userProfile.name}</span>
+              <span className="text-text-main font-bold text-xs uppercase font-mono group-hover:text-primary transition-colors">{userProfile.name}</span>
               <span className="text-[9px] text-text-muted font-mono uppercase tracking-tighter">{userProfile.level}</span>
             </div>
-            <div className="size-9 bg-surface-dark border border-border-dark flex items-center justify-center text-xs font-mono font-bold text-primary overflow-hidden hover:border-primary transition-all relative">
+            <div className="size-9 bg-surface border border-border flex items-center justify-center text-xs font-mono font-bold text-primary overflow-hidden hover:border-primary transition-all relative">
               {userProfile.photo ? <img src={userProfile.photo} alt="Profile" className="w-full h-full object-cover" /> : getInitials(userProfile.name)}
               <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                 <span className="material-symbols-outlined text-sm text-black font-bold">edit</span>
@@ -203,9 +234,9 @@ const App: React.FC = () => {
 
       <main className="flex-grow pt-32 pb-32 md:pb-32 px-4 md:px-8 flex justify-center print:pt-4">
         <div className="w-full max-w-7xl flex flex-col gap-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border-dark pb-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-6">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold uppercase text-white mb-2 tracking-tight">
+              <h2 className="text-3xl md:text-4xl font-bold uppercase text-text-main mb-2 tracking-tight">
                 {currentView === 'DASHBOARD' ? 'Visão Geral de Desempenho' : 'Análise Técnica de Tendências'}
               </h2>
               <p className="text-text-muted font-mono text-sm max-w-2xl leading-relaxed">
@@ -228,30 +259,30 @@ const App: React.FC = () => {
                 {displayExercises.map(ex => (
                   <ExerciseCard key={ex.id} exercise={ex} onDelete={deleteExercise} onEdit={() => handleEditRequest(ex)} />
                 ))}
-                <button onClick={() => setActiveModal('ADD_EXERCISE')} className="bg-surface-dark/30 border-2 border-dashed border-border-dark hover:border-primary group transition-all p-6 flex flex-col items-center justify-center gap-4 text-text-muted hover:text-primary print:hidden">
+                <button onClick={() => setActiveModal('ADD_EXERCISE')} className="bg-surface/30 border-2 border-dashed border-border hover:border-primary group transition-all p-6 flex flex-col items-center justify-center gap-4 text-text-muted hover:text-primary print:hidden">
                   <span className="material-symbols-outlined text-4xl group-hover:scale-110 transition-transform">add_circle</span>
                   <span className="font-mono text-xs uppercase tracking-widest">Novo Exercício</span>
                 </button>
               </div>
 
               <section className="mt-8">
-                <div className="flex items-center gap-4 mb-6"><div className="h-px bg-border-dark flex-1"></div><span className="text-xs font-mono text-text-muted uppercase tracking-widest">Alvos & Objetivos</span><div className="h-px bg-border-dark flex-1"></div></div>
+                <div className="flex items-center gap-4 mb-6"><div className="h-px bg-border flex-1"></div><span className="text-xs font-mono text-text-muted uppercase tracking-widest">Alvos & Objetivos</span><div className="h-px bg-border flex-1"></div></div>
                 {goals.length === 0 ? (
-                  <div className="relative overflow-hidden group border border-dashed border-border-dark bg-surface-dark/50 p-12 flex flex-col items-center justify-center text-center hover:bg-surface-dark/80 transition-colors duration-300 print:hidden">
-                    <div className="bg-surface-dark border border-primary p-4 mb-6 shadow-[4px_4px_0_0_#00f0ff] rotate-3 group-hover:rotate-0 transition-transform duration-300"><span className="material-symbols-outlined text-primary text-5xl">insights</span></div>
-                    <h3 className="text-2xl font-bold uppercase text-white tracking-tight mb-2">Sem Metas Ativas</h3>
+                  <div className="relative overflow-hidden group border border-dashed border-border bg-surface/50 p-12 flex flex-col items-center justify-center text-center hover:bg-surface/80 transition-colors duration-300 print:hidden">
+                    <div className="bg-surface border border-primary p-4 mb-6 shadow-[4px_4px_0_0_#00f0ff] rotate-3 group-hover:rotate-0 transition-transform duration-300"><span className="material-symbols-outlined text-primary text-5xl">insights</span></div>
+                    <h3 className="text-2xl font-bold uppercase text-text-main tracking-tight mb-2">Sem Metas Ativas</h3>
                     <button onClick={() => setActiveModal('ADD_GOAL')} className="flex items-center gap-2 bg-transparent hover:bg-primary text-primary hover:text-black border-2 border-primary px-8 py-3 text-sm font-bold uppercase tracking-wider transition-all duration-300">Nova Meta</button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {goals.map(goal => (
-                      <div key={goal.id} className="bg-surface-dark border border-border-dark p-6 relative group">
-                        <h4 className="text-white text-lg font-bold uppercase mb-2">{goal.title}</h4>
+                      <div key={goal.id} className="bg-surface border border-border p-6 relative group">
+                        <h4 className="text-text-main text-lg font-bold uppercase mb-2">{goal.title}</h4>
                         <p className="text-text-muted font-mono text-sm">{goal.description}</p>
                         <button onClick={() => deleteGoal(goal.id)} className="absolute top-4 right-4 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500 print:hidden"><span className="material-symbols-outlined">delete</span></button>
                       </div>
                     ))}
-                    <button onClick={() => setActiveModal('ADD_GOAL')} className="border-2 border-dashed border-border-dark hover:border-primary flex items-center justify-center p-6 text-text-muted hover:text-primary transition-all group print:hidden"><span className="material-symbols-outlined text-2xl group-hover:scale-125 transition-transform">add</span></button>
+                    <button onClick={() => setActiveModal('ADD_GOAL')} className="border-2 border-dashed border-border hover:border-primary flex items-center justify-center p-6 text-text-muted hover:text-primary transition-all group print:hidden"><span className="material-symbols-outlined text-2xl group-hover:scale-125 transition-transform">add</span></button>
                   </div>
                 )}
               </section>
@@ -262,7 +293,7 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background-dark/95 backdrop-blur-md border-t border-border-dark px-2 py-3 flex items-center justify-around shadow-[0_-10px_20px_rgba(0,0,0,0.5)] print:hidden">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border px-2 py-3 flex items-center justify-around shadow-[0_-10px_20px_rgba(0,0,0,0.5)] print:hidden">
         <button onClick={() => setCurrentView('DASHBOARD')} className={`flex flex-col items-center gap-1 w-full ${currentView === 'DASHBOARD' ? 'text-primary' : 'text-text-muted'}`}><span className="material-symbols-outlined text-2xl">dashboard</span><span className="text-[10px] font-mono uppercase tracking-widest font-bold">Início</span></button>
         <button onClick={handleOpenCoach} className="flex flex-col items-center gap-1 text-text-muted w-full"><div className="bg-primary/10 rounded-full p-2 -mt-6 border border-primary/20 shadow-[0_0_15px_rgba(0,240,255,0.2)]"><span className="material-symbols-outlined text-primary text-2xl">auto_awesome</span></div><span className="text-[10px] font-mono uppercase tracking-widest font-bold">Coach IA</span></button>
         <button onClick={() => setCurrentView('ANALYSIS')} className={`flex flex-col items-center gap-1 w-full ${currentView === 'ANALYSIS' ? 'text-primary' : 'text-text-muted'}`}><span className="material-symbols-outlined text-2xl">analytics</span><span className="text-[10px] font-mono uppercase tracking-widest font-bold">Análise</span></button>
@@ -299,16 +330,63 @@ const App: React.FC = () => {
       />
 
       {showExportModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-background-dark border-2 border-primary shadow-[0_0_30px_rgba(0,240,255,0.3)] w-full max-w-md animate-slideUp">
-            <div className="bg-primary px-6 py-4 flex items-center justify-between"><div className="flex items-center gap-3"><span className="material-symbols-outlined text-black text-2xl">download</span><h3 className="text-black font-bold text-lg uppercase tracking-wider">Exportar Relatório</h3></div><button onClick={() => setShowExportModal(false)} className="text-black hover:bg-black/10 p-1 transition-colors"><span className="material-symbols-outlined">close</span></button></div>
-            <div className="p-6">
-              <p className="text-text-muted font-mono text-sm mb-6">Escolha o formato do arquivo para exportação:</p>
-              <div className="flex flex-col gap-3">
-                <button onClick={exportToCSV} className="group bg-surface-dark border border-border-dark hover:border-primary p-4 flex items-center gap-4 transition-all"><div className="size-12 bg-primary/10 border border-primary/30 flex items-center justify-center group-hover:bg-primary/20"><span className="material-symbols-outlined text-primary text-2xl">table_chart</span></div><div className="flex-1 text-left"><h4 className="text-white font-bold text-sm uppercase tracking-wide mb-1">Exportar CSV</h4><p className="text-text-muted font-mono text-xs">Excel e Google Sheets</p></div></button>
-                <button onClick={exportToPDF} className="group bg-surface-dark border border-border-dark hover:border-primary p-4 flex items-center gap-4 transition-all"><div className="size-12 bg-primary/10 border border-primary/30 flex items-center justify-center group-hover:bg-primary/20"><span className="material-symbols-outlined text-primary text-2xl">picture_as_pdf</span></div><div className="flex-1 text-left"><h4 className="text-white font-bold text-sm uppercase tracking-wide mb-1">Exportar PDF</h4><p className="text-text-muted font-mono text-xs">Pronto para impressão</p></div></button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-surface border border-border shadow-2xl w-full max-w-md animate-in slide-in-from-bottom-4 duration-300 overflow-hidden">
+            <div className="bg-primary px-6 py-6 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-black text-2xl">download</span>
+                <div>
+                  <h3 className="text-black font-black text-lg uppercase tracking-tighter leading-none">Exportar Dados</h3>
+                  <p className="text-black/60 font-mono text-[9px] uppercase tracking-widest mt-1">Extração de relatórios</p>
+                </div>
               </div>
-              <button onClick={() => setShowExportModal(false)} className="w-full mt-6 px-4 py-3 border border-border-dark text-text-muted hover:border-primary hover:text-primary font-mono text-xs uppercase transition-all">Cancelar</button>
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="text-black hover:bg-black/10 size-8 flex items-center justify-center rounded-full transition-all"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="p-8">
+              <p className="text-text-muted font-mono text-[10px] uppercase tracking-widest mb-6 font-bold">Selecione o protocolo de saída:</p>
+
+              <div className="flex flex-col gap-4">
+                <button
+                  onClick={exportToCSV}
+                  className="group bg-black/5 border border-border hover:border-primary p-5 flex items-center gap-5 transition-all text-left relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/[0.02] transition-colors"></div>
+                  <div className="size-12 bg-primary/10 border border-primary/30 flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-all">
+                    <span className="material-symbols-outlined text-primary text-2xl group-hover:text-black transition-colors">table_chart</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-text-main font-black text-sm uppercase tracking-tight mb-0.5">Relatório CSV</h4>
+                    <p className="text-text-muted font-mono text-[10px] uppercase">Excel / Google Sheets</p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={exportToPDF}
+                  className="group bg-black/5 border border-border hover:border-primary p-5 flex items-center gap-5 transition-all text-left relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/[0.02] transition-colors"></div>
+                  <div className="size-12 bg-primary/10 border border-primary/30 flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-all">
+                    <span className="material-symbols-outlined text-primary text-2xl group-hover:text-black transition-colors">picture_as_pdf</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-text-main font-black text-sm uppercase tracking-tight mb-0.5">Arquivo PDF</h4>
+                    <p className="text-text-muted font-mono text-[10px] uppercase">Pronto para Impressão</p>
+                  </div>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="w-full mt-8 py-4 border border-border text-text-muted hover:text-text-main font-mono text-xs uppercase font-bold tracking-[0.2em] transition-all hover:bg-black/5"
+              >
+                Abortar Exportação
+              </button>
             </div>
           </div>
         </div>
@@ -316,5 +394,6 @@ const App: React.FC = () => {
     </div>
   );
 };
+
 
 export default App;

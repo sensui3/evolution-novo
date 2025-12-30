@@ -4,19 +4,21 @@ export default {
         "./index.html",
         "./App.tsx",
         "./components/**/*.{ts,tsx}",
+        "./features/**/*.{ts,tsx}",
         "./services/**/*.{ts,tsx}",
+        "./hooks/**/*.{ts,tsx}",
         "./lib/**/*.{ts,tsx}",
     ],
     darkMode: "class",
     theme: {
         extend: {
             colors: {
-                "primary": "#00f0ff",
-                "background-dark": "#0f172a",
-                "surface-dark": "#1e293b",
-                "border-dark": "#334155",
-                "text-light": "#f1f5f9",
-                "text-muted": "#94a3b8",
+                "primary": "var(--primary)",
+                "background": "var(--background)",
+                "surface": "var(--surface)",
+                "border": "var(--border)",
+                "text-main": "var(--text-main)",
+                "text-muted": "var(--text-muted)",
             },
             fontFamily: {
                 "display": ["Space Grotesk", "sans-serif"],

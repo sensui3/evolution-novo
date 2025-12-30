@@ -2,24 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+    --primary: #00f0ff;
+    --background: #0f172a;
+    --surface: #1e293b;
+    --border: #334155;
+    --text-main: #f1f5f9;
+    --text-muted: #94a3b8;
+}
+
+.light {
+    --primary: #0088ff;
+    --background: #f8fafc;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+}
+
 ::-webkit-scrollbar {
     width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #0f172a;
+    background: var(--background);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #334155;
+    background: var(--border);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #00f0ff;
+    background: var(--primary);
 }
 
 body {
-    background-color: #0f172a;
+    background-color: var(--background);
+    color: var(--text-main);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 @keyframes pulse-glow {

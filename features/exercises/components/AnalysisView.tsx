@@ -188,13 +188,13 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ exercises, timeframe }) => 
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col gap-6 border-b border-border-dark pb-8 print:hidden">
+      <div className="flex flex-col gap-6 border-b border-border pb-8 print:hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex flex-col gap-3">
             <span className="text-[10px] font-mono text-text-muted uppercase tracking-widest font-bold">Categoria</span>
             <div className="flex flex-wrap gap-2">
               {categories.map(cat => (
-                <button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-4 py-1.5 font-mono text-[11px] uppercase border ${selectedCategory === cat ? 'bg-primary text-black border-primary font-bold' : 'text-text-muted border-border-dark hover:border-primary'}`}>
+                <button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-4 py-1.5 font-mono text-[11px] uppercase border ${selectedCategory === cat ? 'bg-primary text-black border-primary font-bold' : 'text-text-muted border-border hover:border-primary'}`}>
                   {cat}
                 </button>
               ))}
@@ -202,9 +202,9 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ exercises, timeframe }) => 
           </div>
           <div className="flex flex-col gap-3 md:items-end">
             <span className="text-[10px] font-mono text-text-muted uppercase tracking-widest font-bold">Janela de Tempo</span>
-            <div className="flex items-center gap-1 bg-black/40 border border-border-dark p-1 rounded-sm">
+            <div className="flex items-center gap-1 bg-black/10 border border-border p-1 rounded-sm">
               {(['WEEK', 'MONTH', 'YEAR', 'CUSTOM'] as AnalysisTimeframe[]).map((tf) => (
-                <button key={tf} onClick={() => setActiveTimeframe(tf)} className={`px-4 py-2 text-[10px] font-mono uppercase transition-all ${activeTimeframe === tf ? 'bg-primary text-black font-bold' : 'text-text-muted hover:text-white'}`}>
+                <button key={tf} onClick={() => setActiveTimeframe(tf)} className={`px-4 py-2 text-[10px] font-mono uppercase transition-all ${activeTimeframe === tf ? 'bg-primary text-black font-bold' : 'text-text-muted hover:text-text-main'}`}>
                   {tf === 'WEEK' ? 'Semana' : tf === 'MONTH' ? 'Mês' : tf === 'YEAR' ? 'Ano' : 'Custom'}
                 </button>
               ))}
@@ -216,11 +216,11 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ exercises, timeframe }) => 
           <div className="flex flex-wrap items-end gap-4 animate-in slide-in-from-top-2 duration-300">
             <div>
               <label className="block text-[9px] font-mono text-text-muted uppercase mb-1">Data Início</label>
-              <input type="date" value={customRange.start} onChange={e => setCustomRange({ ...customRange, start: e.target.value })} className="bg-surface-dark border border-border-dark text-white font-mono text-xs p-2 outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
+              <input type="date" value={customRange.start} onChange={e => setCustomRange({ ...customRange, start: e.target.value })} className="bg-surface border border-border text-text-main font-mono text-xs p-2 outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
             </div>
             <div>
               <label className="block text-[9px] font-mono text-text-muted uppercase mb-1">Data Fim</label>
-              <input type="date" value={customRange.end} onChange={e => setCustomRange({ ...customRange, end: e.target.value })} className="bg-surface-dark border border-border-dark text-white font-mono text-xs p-2 outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
+              <input type="date" value={customRange.end} onChange={e => setCustomRange({ ...customRange, end: e.target.value })} className="bg-surface border border-border text-text-main font-mono text-xs p-2 outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
             </div>
             <button onClick={() => setCustomRange({ start: '', end: '' })} className="text-[10px] font-mono text-text-muted hover:text-red-500 uppercase pb-2">Limpar</button>
           </div>
@@ -228,25 +228,25 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ exercises, timeframe }) => 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-surface-dark border-l-4 border-primary p-6 shadow-brutal-sm">
+        <div className="bg-surface border-l-4 border-primary p-6 shadow-brutal-sm">
           <span className="text-[10px] font-mono text-text-muted uppercase tracking-widest">Atividade {timeframeLabel}</span>
-          <div className="text-3xl font-bold text-white mt-1 font-mono">{filteredExercises.length} Exercícios</div>
+          <div className="text-3xl font-bold text-text-main mt-1 font-mono">{filteredExercises.length} Exercícios</div>
         </div>
-        <div className="bg-surface-dark border-l-4 border-primary p-6 shadow-brutal-sm col-span-2">
+        <div className="bg-surface border-l-4 border-primary p-6 shadow-brutal-sm col-span-2">
           <h3 className="text-[10px] font-mono text-text-muted uppercase tracking-widest mb-2">IA: Perspectiva de Treino</h3>
-          <div className="font-mono text-xs leading-relaxed text-text-light italic">
+          <div className="font-mono text-xs leading-relaxed text-text-main italic">
             {isLoading ? "Processando biométrica..." : deepInsight}
           </div>
         </div>
       </div>
 
-      <section className="bg-surface-dark border border-border-dark overflow-hidden mb-12">
-        <div className="p-6 border-b border-border-dark bg-black/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h3 className="text-lg font-bold uppercase tracking-wider text-white">Relatório de Performance</h3>
+      <section className="bg-surface border border-border overflow-hidden mb-12">
+        <div className="p-6 border-b border-border bg-black/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h3 className="text-lg font-bold uppercase tracking-wider text-text-main">Relatório de Performance</h3>
           <div className="flex items-center gap-3 print:hidden">
             <button
               onClick={handleExportCSV}
-              className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-border-dark text-text-muted hover:text-primary hover:border-primary font-mono text-[10px] uppercase transition-all"
+              className="flex items-center gap-2 px-4 py-2 bg-black/5 border border-border text-text-muted hover:text-primary hover:border-primary font-mono text-[10px] uppercase transition-all"
             >
               <span className="material-symbols-outlined text-sm">download</span>
               Exportar CSV
@@ -262,7 +262,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ exercises, timeframe }) => 
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left font-mono text-sm border-collapse">
-            <thead className="bg-black/40 text-text-muted uppercase text-[10px] tracking-widest border-b border-border-dark/30">
+            <thead className="bg-black/5 text-text-muted uppercase text-[10px] tracking-widest border-b border-border/30">
               <tr>
                 <th className="px-6 py-4 w-10"></th>
                 <th className="px-6 py-4 cursor-pointer" onClick={() => setSortConfig({ key: 'name', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })}>Exercício</th>
@@ -271,7 +271,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ exercises, timeframe }) => 
                 <th className="px-6 py-4">Evolução</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border-dark/30">
+            <tbody className="divide-y divide-border/30">
               {filteredExercises.length === 0 ? (
                 <tr><td colSpan={5} className="px-6 py-20 text-center text-text-muted italic">Nenhum dado encontrado para este intervalo.</td></tr>
               ) : (
@@ -286,7 +286,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ exercises, timeframe }) => 
                           chevron_right
                         </span>
                       </td>
-                      <td className="px-6 py-4 font-bold text-white uppercase">{ex.name}</td>
+                      <td className="px-6 py-4 font-bold text-text-main uppercase">{ex.name}</td>
                       <td className="px-6 py-4 text-right">{ex.lastWeight}kg</td>
                       <td className="px-6 py-4 text-primary font-bold text-right">{ex.pbWeight}kg</td>
                       <td className="px-6 py-4"><PerformanceSparkline exercise={ex} /></td>
@@ -294,7 +294,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ exercises, timeframe }) => 
 
                     {/* Linha de Detalhes Expandida */}
                     {expandedRowId === ex.id && (
-                      <tr className="bg-black/40 animate-in slide-in-from-top-2 duration-300">
+                      <tr className="bg-black/5 animate-in slide-in-from-top-2 duration-300">
                         <td colSpan={5} className="px-6 py-6">
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pl-10 border-l-2 border-primary/30">
                             <div className="col-span-full mb-2">
@@ -302,16 +302,16 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ exercises, timeframe }) => 
                             </div>
                             {ex.history && ex.history.length > 0 ? (
                               ex.history.map((log, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-3 bg-surface-dark border border-border-dark/50 group/log">
+                                <div key={idx} className="flex items-center justify-between bg-surface border border-border/50 group/log">
                                   <div className="flex items-center gap-3">
                                     <div className={`size-2 rounded-full ${log.type === 'PR' ? 'bg-primary shadow-glow' : 'bg-text-muted opacity-50'}`}></div>
                                     <div className="flex flex-col">
-                                      <span className="text-xs text-white font-bold">{log.weight}kg</span>
+                                      <span className="text-xs text-text-main font-bold">{log.weight}kg</span>
                                       <span className="text-[9px] text-text-muted uppercase">{log.date}</span>
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <span className={`text-[8px] font-mono font-bold px-2 py-0.5 rounded-full ${log.type === 'PR' ? 'bg-primary text-black' : 'bg-border-dark text-text-muted uppercase'}`}>
+                                    <span className={`text-[8px] font-mono font-bold px-2 py-0.5 rounded-full ${log.type === 'PR' ? 'bg-primary text-black' : 'bg-border text-text-muted uppercase'}`}>
                                       {log.type === 'PR' ? 'RECORD' : 'LOAD'}
                                     </span>
                                   </div>
