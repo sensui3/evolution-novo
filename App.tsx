@@ -528,12 +528,7 @@ const App: React.FC = () => {
                 try {
                   await signIn.social({
                     provider: 'google',
-                    fetchOptions: {
-                      headers: {
-                        "x-better-auth-project-id": (import.meta as any).env.VITE_NEON_PROJECT_ID,
-                        "x-neon-project-id": (import.meta as any).env.VITE_NEON_PROJECT_ID
-                      }
-                    }
+                    callbackURL: window.location.origin
                   });
                 } catch (err) {
                   console.error("Erro no login:", err);
