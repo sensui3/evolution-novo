@@ -10,31 +10,15 @@ if (!databaseUrl) {
   console.error("ERRO: VITE_DATABASE_URL não encontrada. Certifique-se de que o arquivo .env.local está configurado corretamente.");
 }
 
-
+// Inicializa o cliente SQL do Neon usando a URL direta (ideal para 'neondb_owner' ou conexão sem RLS por token)
 let sqlClient = neon(databaseUrl || "");
 
 /**
  * SERVIÇO DE BANCO DE DADOS NEON
  * 
  * Este serviço gerencia a persistência de dados no Neon DB.
- * Agora suporta autenticação via JWT para segurança máxima com RLS.
  */
-
 export const databaseService = {
-  /**
-   * Configura o cliente SQL com um token de autenticação (JWT).
-   * Isso permite que o banco identifique o usuário e aplique as políticas de RLS.
-   */
-  setToken(token: string | null) {
-    if (token) {
-      // Quando usamos token, não precisamos (e nem devemos) enviar a senha no URL
-      // Removemos a parte de usuário/senha da string de conexão se ela existir
-      const cleanUrl = databaseUrl?.replace(/\/\/.*:.*@/, '//');
-      sqlClient = neon(cleanUrl || "", { authToken: token });
-    } else {
-      sqlClient = neon(databaseUrl || "");
-    }
-  },
 
   // --- PERFIL DO USUÁRIO ---
   async getUserProfile(userId: string): Promise<UserProfile | null> {
@@ -108,22 +92,38 @@ export const databaseService = {
     return fullExercises;
   },
 
-  async addExercise(userId: string, exercise: Omit<Exercise, 'id' | 'progress' | 'avgVolume' | 'lastWeight' | 'lastDate' | 'pbWeight' | 'pbDate'>): Promise<Exercise> {
+  async addExercise(userId: string, exercise: Partial<Exercise> & { name: string, category: string }): Promise<Exercise> {
     const [newEx] = await sqlClient`
       INSERT INTO public.exercises (user_id, name, category)
       VALUES (${userId}, ${exercise.name}, ${exercise.category})
       RETURNING id, name, category
     `;
 
+    // Se houver carga inicial, salva no log
+    if (exercise.lastWeight && exercise.lastWeight > 0) {
+      await sqlClient`
+        INSERT INTO public.weight_logs (exercise_id, weight, type, date)
+        VALUES (${newEx.id}, ${exercise.lastWeight}, 'LOAD', NOW())
+      `;
+    }
+
+    // Se houver PR inicial, salva no log
+    if (exercise.pbWeight && exercise.pbWeight > 0) {
+      await sqlClient`
+        INSERT INTO public.weight_logs (exercise_id, weight, type, date)
+        VALUES (${newEx.id}, ${exercise.pbWeight}, 'PR', NOW())
+      `;
+    }
+
     return {
       id: newEx.id,
       name: newEx.name,
       category: newEx.category,
-      lastWeight: 0,
-      lastDate: '-',
-      pbWeight: 0,
-      pbDate: '-',
-      avgVolume: 0,
+      lastWeight: exercise.lastWeight || 0,
+      lastDate: exercise.lastWeight ? new Date().toLocaleDateString('pt-BR') : '-',
+      pbWeight: exercise.pbWeight || 0,
+      pbDate: exercise.pbWeight ? new Date().toLocaleDateString('pt-BR') : '-',
+      avgVolume: exercise.avgVolume || 0,
       progress: 0,
       history: []
     } as Exercise;

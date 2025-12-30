@@ -7,14 +7,19 @@ import AnalysisView from './components/AnalysisView';
 import Modal from './components/Modals';
 import { getCoachingTips } from './services/geminiService';
 import { databaseService } from './services/databaseService';
-import { useSession, signIn, signOut } from './lib/auth';
+// import { useSession, signIn, signOut } from './lib/auth'; // Auth removido
 
 type ViewType = 'DASHBOARD' | 'ANALYSIS';
 type TimeframeType = 'WEEK' | 'MONTH';
 
 const App: React.FC = () => {
-  const { data: session, isPending } = useSession();
-  const user = session?.user;
+  // Usuário padrão hardcoded para funcionamento sem Auth
+  const user = {
+    id: "370a7584-f440-4ae6-8b67-ee6bc52dc527", // ID existente no banco de dados para manter os dados
+    name: "Achadoz Agência",
+    image: "https://lh3.googleusercontent.com/a/ACg8ocLjq_rYcvuJ8VUPQ38yTvO7pcPHVwzicPAHv6eSTbeG3yeLVXU=s96-c"
+  };
+  const isPending = false;
 
   const [exercises, setExercises] = useState<Exercise[]>(INITIAL_EXERCISES);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -37,26 +42,12 @@ const App: React.FC = () => {
 
 
   // Carregar dados e configurar segurança quando houver sessão
+  // Carregar dados iniciais
   useEffect(() => {
-    if (session?.session?.token) {
-      // Configura o banco de dados para usar o token JWT do usuário atual
-      // Isso habilita o RLS e remove a necessidade de senhas no frontend
-      databaseService.setToken(session.session.token);
-    } else {
-      databaseService.setToken(null);
-    }
-
     if (user) {
       loadUserData();
-
-      // Limpa os parâmetros da URL (como neon_auth_session_verifier) para segurança e estética
-      const url = new URL(window.location.href);
-      if (url.searchParams.has('neon_auth_session_verifier')) {
-        url.searchParams.delete('neon_auth_session_verifier');
-        window.history.replaceState({}, '', url.toString());
-      }
     }
-  }, [user, session]);
+  }, []); // Executa apenas uma vez no mount, já que user é estático agora
 
   const loadUserData = async () => {
     if (!user) return;
@@ -472,19 +463,7 @@ const App: React.FC = () => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
 
-  if (isPending) {
-    return (
-      <div className="min-h-screen bg-background-dark flex flex-col items-center justify-center gap-6">
-        <div className="size-20 bg-primary/20 border-2 border-primary flex items-center justify-center animate-pulse">
-          <span className="material-symbols-outlined text-primary text-4xl animate-spin">sync</span>
-        </div>
-        <div className="flex flex-col items-center">
-          <h2 className="text-white text-xl font-bold tracking-widest uppercase">EVOLUTION</h2>
-          <span className="text-[10px] text-primary font-mono tracking-widest uppercase">Validando Sessão Segura...</span>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -521,24 +500,7 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          {!user && !isPending && (
-            <button
-              onClick={async () => {
-                console.log("Iniciando login social...");
-                try {
-                  await signIn.social({
-                    provider: 'google',
-                    callbackURL: window.location.origin
-                  });
-                } catch (err) {
-                  console.error("Erro no login:", err);
-                }
-              }}
-              className="px-4 py-2 bg-primary text-black font-bold text-xs uppercase font-mono shadow-glow"
-            >
-              Login
-            </button>
-          )}
+          {/* Botão Login removido */}
 
           {user && (
             <div
@@ -559,13 +521,7 @@ const App: React.FC = () => {
                   <span className="material-symbols-outlined text-sm text-black font-bold">edit</span>
                 </div>
               </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); signOut(); }}
-                className="ml-2 text-text-muted hover:text-red-500 transition-colors"
-                title="Sair"
-              >
-                <span className="material-symbols-outlined text-sm">logout</span>
-              </button>
+              {/* Botão de Logout removido */}
             </div>
           )}
         </div>
