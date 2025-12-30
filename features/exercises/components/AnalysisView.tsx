@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { Exercise, WeightLog } from '../types';
-import { getDeepAnalysis } from '../services/geminiService';
+import { Exercise, WeightLog } from '../../../types';
+import { getDeepAnalysis } from '../../../services/geminiService';
 
 interface AnalysisViewProps {
   exercises: Exercise[];
@@ -33,17 +33,22 @@ const PerformanceSparkline: React.FC<{ exercise: Exercise }> = ({ exercise }) =>
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
 
   const history = useMemo(() => {
-    const points = 8;
-    const seed = exercise.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const data = [];
-    for (let i = 0; i < points; i++) {
-      const progressFactor = i / (points - 1);
-      const fluctuation = Math.sin(seed + i) * 3;
-      const simulatedWeight = exercise.lastWeight * (0.85 + (0.15 * progressFactor)) + fluctuation;
-      const simulatedPB = i < points - 3 ? exercise.pbWeight * 0.95 : exercise.pbWeight;
-      data.push({ weight: parseFloat(simulatedWeight.toFixed(1)), pb: parseFloat(simulatedPB.toFixed(1)), date: `${i + 1} Out` });
+    // Se não houver histórico, cria um ponto único com o peso atual
+    if (!exercise.history || exercise.history.length === 0) {
+      return [{
+        weight: exercise.lastWeight,
+        pb: exercise.pbWeight,
+        date: exercise.lastDate
+      }];
     }
-    return data;
+
+    // Mapeia o histórico real vindo do banco (logs estão do mais novo para o mais antigo)
+    // Invertemos para o gráfico mostrar a progressão da esquerda para a direita (passado -> presente)
+    return [...exercise.history].reverse().map(log => ({
+      weight: log.weight,
+      pb: exercise.pbWeight,
+      date: log.date
+    }));
   }, [exercise]);
 
   const maxVal = Math.max(...history.map(d => Math.max(d.weight, d.pb))) * 1.1;
@@ -211,11 +216,11 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ exercises, timeframe }) => 
           <div className="flex flex-wrap items-end gap-4 animate-in slide-in-from-top-2 duration-300">
             <div>
               <label className="block text-[9px] font-mono text-text-muted uppercase mb-1">Data Início</label>
-              <input type="date" value={customRange.start} onChange={e => setCustomRange({...customRange, start: e.target.value})} className="bg-surface-dark border border-border-dark text-white font-mono text-xs p-2 outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
+              <input type="date" value={customRange.start} onChange={e => setCustomRange({ ...customRange, start: e.target.value })} className="bg-surface-dark border border-border-dark text-white font-mono text-xs p-2 outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
             </div>
             <div>
               <label className="block text-[9px] font-mono text-text-muted uppercase mb-1">Data Fim</label>
-              <input type="date" value={customRange.end} onChange={e => setCustomRange({...customRange, end: e.target.value})} className="bg-surface-dark border border-border-dark text-white font-mono text-xs p-2 outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
+              <input type="date" value={customRange.end} onChange={e => setCustomRange({ ...customRange, end: e.target.value })} className="bg-surface-dark border border-border-dark text-white font-mono text-xs p-2 outline-none focus:border-primary" style={{ colorScheme: 'dark' }} />
             </div>
             <button onClick={() => setCustomRange({ start: '', end: '' })} className="text-[10px] font-mono text-text-muted hover:text-red-500 uppercase pb-2">Limpar</button>
           </div>
@@ -239,15 +244,15 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ exercises, timeframe }) => 
         <div className="p-6 border-b border-border-dark bg-black/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h3 className="text-lg font-bold uppercase tracking-wider text-white">Relatório de Performance</h3>
           <div className="flex items-center gap-3 print:hidden">
-            <button 
+            <button
               onClick={handleExportCSV}
               className="flex items-center gap-2 px-4 py-2 bg-black/40 border border-border-dark text-text-muted hover:text-primary hover:border-primary font-mono text-[10px] uppercase transition-all"
             >
               <span className="material-symbols-outlined text-sm">download</span>
               Exportar CSV
             </button>
-            <button 
-              onClick={() => window.print()} 
+            <button
+              onClick={() => window.print()}
               className="flex items-center gap-2 px-4 py-2 bg-primary/20 border border-primary text-primary hover:bg-primary hover:text-black font-mono text-[10px] uppercase transition-all shadow-glow"
             >
               <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
@@ -272,7 +277,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ exercises, timeframe }) => 
               ) : (
                 filteredExercises.map(ex => (
                   <React.Fragment key={ex.id}>
-                    <tr 
+                    <tr
                       onClick={() => toggleRow(ex.id)}
                       className={`hover:bg-primary/5 transition-colors group cursor-pointer ${expandedRowId === ex.id ? 'bg-primary/10' : ''}`}
                     >
@@ -286,14 +291,14 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ exercises, timeframe }) => 
                       <td className="px-6 py-4 text-primary font-bold text-right">{ex.pbWeight}kg</td>
                       <td className="px-6 py-4"><PerformanceSparkline exercise={ex} /></td>
                     </tr>
-                    
+
                     {/* Linha de Detalhes Expandida */}
                     {expandedRowId === ex.id && (
                       <tr className="bg-black/40 animate-in slide-in-from-top-2 duration-300">
                         <td colSpan={5} className="px-6 py-6">
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pl-10 border-l-2 border-primary/30">
                             <div className="col-span-full mb-2">
-                               <span className="text-[10px] font-mono text-primary uppercase font-bold tracking-[0.2em]">Log de Atividade Recente</span>
+                              <span className="text-[10px] font-mono text-primary uppercase font-bold tracking-[0.2em]">Log de Atividade Recente</span>
                             </div>
                             {ex.history && ex.history.length > 0 ? (
                               ex.history.map((log, idx) => (

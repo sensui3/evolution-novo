@@ -45,31 +45,38 @@ export const databaseService = {
 
   // --- EXERCÍCIOS ---
   async getExercises(userId: string): Promise<Exercise[]> {
-    const exercises = await sqlClient`
-      SELECT id, name, category 
-      FROM public.exercises 
-      WHERE user_id = ${userId}
-      ORDER BY created_at DESC
+    const data = await sqlClient`
+      SELECT 
+        e.id, 
+        e.name, 
+        e.category,
+        e.created_at,
+        (
+          SELECT json_agg(logs)
+          FROM (
+            SELECT weight, date, type
+            FROM public.weight_logs
+            WHERE exercise_id = e.id
+            ORDER BY date DESC
+            LIMIT 10
+          ) logs
+        ) as logs,
+        (
+          SELECT json_build_object('weight', weight, 'date', date)
+          FROM public.weight_logs
+          WHERE exercise_id = e.id AND type = 'PR'
+          ORDER BY weight DESC
+          LIMIT 1
+        ) as pb
+      FROM public.exercises e
+      WHERE e.user_id = ${userId}
+      ORDER BY e.created_at DESC
     `;
 
-    const fullExercises = await Promise.all(exercises.map(async (ex) => {
-      const logs = await sqlClient`
-        SELECT weight, date, type 
-        FROM public.weight_logs 
-        WHERE exercise_id = ${ex.id}
-        ORDER BY date DESC
-        LIMIT 10
-      `;
-
-      const pb = await sqlClient`
-        SELECT weight, date 
-        FROM public.weight_logs 
-        WHERE exercise_id = ${ex.id} AND type = 'PR'
-        ORDER BY weight DESC
-        LIMIT 1
-      `;
-
-      const last = logs[0] || { weight: 0, date: new Date().toISOString() };
+    return data.map((ex: any) => {
+      const logs = ex.logs || [];
+      const pb = ex.pb || {};
+      const last = logs[0] || { weight: 0, date: ex.created_at || new Date().toISOString() };
 
       return {
         id: ex.id,
@@ -77,19 +84,17 @@ export const databaseService = {
         category: ex.category,
         lastWeight: last.weight || 0,
         lastDate: new Date(last.date).toLocaleDateString('pt-BR'),
-        pbWeight: pb[0]?.weight || 0,
-        pbDate: pb[0]?.date ? new Date(pb[0].date).toLocaleDateString('pt-BR') : '-',
-        avgVolume: 0,
-        progress: Math.floor(Math.random() * 40) + 60,
-        history: logs.map(l => ({
+        pbWeight: pb.weight || 0,
+        pbDate: pb.date ? new Date(pb.date).toLocaleDateString('pt-BR') : '-',
+        avgVolume: 0, // Pode ser calculado no futuro
+        progress: Math.floor(Math.random() * 40) + 60, // Placeholder por enquanto
+        history: logs.map((l: any) => ({
           weight: l.weight,
           date: new Date(l.date).toLocaleDateString('pt-BR'),
           type: l.type
         }))
       } as Exercise;
-    }));
-
-    return fullExercises;
+    });
   },
 
   async addExercise(userId: string, exercise: Partial<Exercise> & { name: string, category: string }): Promise<Exercise> {

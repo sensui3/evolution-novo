@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Exercise } from '../types';
+import { Exercise } from '../../../types';
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -25,16 +25,15 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete, onEdit 
   };
 
   return (
-    <article 
-      className={`group relative bg-surface-dark border border-border-dark hover:border-primary transition-all duration-300 hover:shadow-glow overflow-hidden cursor-pointer ${
-        isDeleting 
-          ? 'opacity-0 scale-95 translate-y-4 pointer-events-none' 
+    <article
+      className={`group relative bg-surface-dark border border-border-dark hover:border-primary transition-all duration-300 hover:shadow-glow overflow-hidden cursor-pointer ${isDeleting
+          ? 'opacity-0 scale-95 translate-y-4 pointer-events-none'
           : 'opacity-100 scale-100'
-      }`}
+        }`}
       onClick={toggleHistory}
     >
       {/* Indicador lateral de progresso */}
-      <div 
+      <div
         className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20 group-hover:bg-primary transition-colors"
         style={{ height: '100%' }}
       ></div>
@@ -48,14 +47,14 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete, onEdit 
             <span className="text-[10px] font-mono text-text-muted uppercase tracking-wider">{exercise.category}</span>
           </div>
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-            <button 
+            <button
               onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
               className="text-text-muted hover:text-primary p-1 hover:scale-110 active:scale-90"
               title="Editar"
             >
               <span className="material-symbols-outlined text-lg">edit</span>
             </button>
-            <button 
+            <button
               onClick={handleDelete}
               className="text-text-muted hover:text-red-500 p-1 hover:scale-110 active:scale-90"
               title="Excluir"
@@ -102,17 +101,16 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete, onEdit 
         </div>
 
         {/* Histórico Detalhado (Log de Performance) com Animação Melhorada */}
-        <div 
-          className={`transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden transform ${
-            showHistory 
-              ? 'max-h-[300px] opacity-100 mb-6 translate-y-0' 
+        <div
+          className={`transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden transform ${showHistory
+              ? 'max-h-[300px] opacity-100 mb-6 translate-y-0'
               : 'max-h-0 opacity-0 -translate-y-4'
-          }`}
+            }`}
         >
           <div className="border-t border-border-dark/30 pt-4 flex flex-col gap-2">
             <div className="flex items-center gap-2 mb-1">
-               <span className="material-symbols-outlined text-[14px] text-primary">history</span>
-               <span className="text-[10px] font-mono text-primary uppercase font-bold tracking-widest">Log de Performance</span>
+              <span className="material-symbols-outlined text-[14px] text-primary">history</span>
+              <span className="text-[10px] font-mono text-primary uppercase font-bold tracking-widest">Log de Performance</span>
             </div>
             {exercise.history && exercise.history.length > 0 ? (
               exercise.history.map((log, idx) => (
@@ -139,17 +137,17 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onDelete, onEdit 
         <div className="mt-auto flex items-center gap-4">
           <div className="flex-grow">
             <div className="flex justify-between items-center mb-1.5">
-               <span className="text-[9px] font-mono text-text-muted uppercase tracking-widest">Eficiência de Treino</span>
-               <span className="text-[10px] font-mono text-primary font-bold">{exercise.progress}%</span>
+              <span className="text-[9px] font-mono text-text-muted uppercase tracking-widest">Eficiência de Treino</span>
+              <span className="text-[10px] font-mono text-primary font-bold">{exercise.progress}%</span>
             </div>
             <div className="h-1 bg-border-dark overflow-hidden rounded-full relative">
-              <div 
-                className="absolute inset-y-0 left-0 bg-primary shadow-[0_0_10px_rgba(0,240,255,0.5)] transition-all duration-1000 ease-out" 
+              <div
+                className="absolute inset-y-0 left-0 bg-primary shadow-[0_0_10px_rgba(0,240,255,0.5)] transition-all duration-1000 ease-out"
                 style={{ width: `${exercise.progress}%` }}
               ></div>
             </div>
           </div>
-          <button 
+          <button
             className={`bg-surface-dark border border-border-dark size-8 flex items-center justify-center hover:bg-primary hover:text-black hover:border-primary transition-all duration-500 group/btn ${showHistory ? 'rotate-90 bg-primary text-black border-primary' : ''}`}
           >
             <span className="material-symbols-outlined text-sm transition-transform">arrow_forward</span>
