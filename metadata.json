@@ -1,0 +1,7 @@
+{
+  "name": "EVOLUTION - Dashboard de Performance",
+  "description": "Um dashboard de alta performance para atletas monitorarem progresso em exercícios chave, definirem metas de treino e receberem dicas de coaching via IA.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
