@@ -3,7 +3,15 @@ import { neon } from '@neondatabase/serverless';
 import { Exercise, Goal, UserProfile, WeightLog } from "../types";
 
 // Inicializa o cliente SQL do Neon
-const sql = neon((import.meta as any).env.VITE_DATABASE_URL);
+// Inicializa o cliente SQL do Neon com verificação de segurança
+const databaseUrl = (import.meta as any).env.VITE_DATABASE_URL || (import.meta as any).env.DATABASE_URL;
+
+if (!databaseUrl) {
+  console.error("ERRO: VITE_DATABASE_URL não encontrada. Certifique-se de que o arquivo .env.local está configurado corretamente.");
+}
+
+const sql = neon(databaseUrl || "");
+
 
 /**
  * SERVIÇO DE BANCO DE DADOS NEON
@@ -12,18 +20,18 @@ const sql = neon((import.meta as any).env.VITE_DATABASE_URL);
  */
 
 export const databaseService = {
-    // --- PERFIL DO USUÁRIO ---
-    async getUserProfile(userId: string): Promise<UserProfile | null> {
-        const result = await sql`
+  // --- PERFIL DO USUÁRIO ---
+  async getUserProfile(userId: string): Promise<UserProfile | null> {
+    const result = await sql`
       SELECT name, weight, level, photo_url as photo 
       FROM public.users 
       WHERE id = ${userId}
     `;
-        return result[0] ? (result[0] as UserProfile) : null;
-    },
+    return result[0] ? (result[0] as UserProfile) : null;
+  },
 
-    async updateUserProfile(userId: string, profile: Partial<UserProfile>): Promise<void> {
-        await sql`
+  async updateUserProfile(userId: string, profile: Partial<UserProfile>): Promise<void> {
+    await sql`
       UPDATE public.users 
       SET 
         name = COALESCE(${profile.name}, name),
@@ -33,19 +41,19 @@ export const databaseService = {
         updated_at = NOW()
       WHERE id = ${userId}
     `;
-    },
+  },
 
-    // --- EXERCÍCIOS ---
-    async getExercises(userId: string): Promise<Exercise[]> {
-        const exercises = await sql`
+  // --- EXERCÍCIOS ---
+  async getExercises(userId: string): Promise<Exercise[]> {
+    const exercises = await sql`
       SELECT id, name, category 
       FROM public.exercises 
       WHERE user_id = ${userId}
       ORDER BY created_at DESC
     `;
 
-        const fullExercises = await Promise.all(exercises.map(async (ex) => {
-            const logs = await sql`
+    const fullExercises = await Promise.all(exercises.map(async (ex) => {
+      const logs = await sql`
         SELECT weight, date, type 
         FROM public.weight_logs 
         WHERE exercise_id = ${ex.id}
@@ -53,7 +61,7 @@ export const databaseService = {
         LIMIT 10
       `;
 
-            const pb = await sql`
+      const pb = await sql`
         SELECT weight, date 
         FROM public.weight_logs 
         WHERE exercise_id = ${ex.id} AND type = 'PR'
@@ -61,82 +69,82 @@ export const databaseService = {
         LIMIT 1
       `;
 
-            const last = logs[0] || { weight: 0, date: new Date().toISOString() };
+      const last = logs[0] || { weight: 0, date: new Date().toISOString() };
 
-            return {
-                id: ex.id,
-                name: ex.name,
-                category: ex.category,
-                lastWeight: last.weight || 0,
-                lastDate: new Date(last.date).toLocaleDateString('pt-BR'),
-                pbWeight: pb[0]?.weight || 0,
-                pbDate: pb[0]?.date ? new Date(pb[0].date).toLocaleDateString('pt-BR') : '-',
-                avgVolume: 0,
-                progress: Math.floor(Math.random() * 40) + 60,
-                history: logs.map(l => ({
-                    weight: l.weight,
-                    date: new Date(l.date).toLocaleDateString('pt-BR'),
-                    type: l.type
-                }))
-            } as Exercise;
-        }));
+      return {
+        id: ex.id,
+        name: ex.name,
+        category: ex.category,
+        lastWeight: last.weight || 0,
+        lastDate: new Date(last.date).toLocaleDateString('pt-BR'),
+        pbWeight: pb[0]?.weight || 0,
+        pbDate: pb[0]?.date ? new Date(pb[0].date).toLocaleDateString('pt-BR') : '-',
+        avgVolume: 0,
+        progress: Math.floor(Math.random() * 40) + 60,
+        history: logs.map(l => ({
+          weight: l.weight,
+          date: new Date(l.date).toLocaleDateString('pt-BR'),
+          type: l.type
+        }))
+      } as Exercise;
+    }));
 
-        return fullExercises;
-    },
+    return fullExercises;
+  },
 
-    async addExercise(userId: string, exercise: Omit<Exercise, 'id' | 'progress' | 'avgVolume' | 'lastWeight' | 'lastDate' | 'pbWeight' | 'pbDate'>): Promise<Exercise> {
-        const [newEx] = await sql`
+  async addExercise(userId: string, exercise: Omit<Exercise, 'id' | 'progress' | 'avgVolume' | 'lastWeight' | 'lastDate' | 'pbWeight' | 'pbDate'>): Promise<Exercise> {
+    const [newEx] = await sql`
       INSERT INTO public.exercises (user_id, name, category)
       VALUES (${userId}, ${exercise.name}, ${exercise.category})
       RETURNING id, name, category
     `;
 
-        return {
-            id: newEx.id,
-            name: newEx.name,
-            category: newEx.category,
-            lastWeight: 0,
-            lastDate: '-',
-            pbWeight: 0,
-            pbDate: '-',
-            avgVolume: 0,
-            progress: 0,
-            history: []
-        };
-    },
+    return {
+      id: newEx.id,
+      name: newEx.name,
+      category: newEx.category,
+      lastWeight: 0,
+      lastDate: '-',
+      pbWeight: 0,
+      pbDate: '-',
+      avgVolume: 0,
+      progress: 0,
+      history: []
+    };
+  },
 
-    async addWeightLog(exerciseId: string, log: Omit<WeightLog, 'date'>): Promise<void> {
-        await sql`
+  async addWeightLog(exerciseId: string, log: Omit<WeightLog, 'date'>): Promise<void> {
+    await sql`
       INSERT INTO public.weight_logs (exercise_id, weight, type, date)
       VALUES (${exerciseId}, ${log.weight}, ${log.type}, NOW())
     `;
-    },
+  },
 
-    async deleteExercise(exerciseId: string): Promise<void> {
-        await sql`DELETE FROM public.exercises WHERE id = ${exerciseId}`;
-    },
+  async deleteExercise(exerciseId: string): Promise<void> {
+    await sql`DELETE FROM public.exercises WHERE id = ${exerciseId}`;
+  },
 
-    // --- METAS ---
-    async getGoals(userId: string): Promise<Goal[]> {
-        const result = await sql`
+  // --- METAS ---
+  async getGoals(userId: string): Promise<Goal[]> {
+    const result = await sql`
       SELECT id, title, description 
       FROM public.goals 
       WHERE user_id = ${userId}
       ORDER BY created_at DESC
     `;
-        return result as Goal[];
-    },
+    return result as Goal[];
+  },
 
-    async addGoal(userId: string, goal: Omit<Goal, 'id'>): Promise<Goal> {
-        const [newGoal] = await sql`
+  async addGoal(userId: string, goal: Omit<Goal, 'id'>): Promise<Goal> {
+    const [newGoal] = await sql`
       INSERT INTO public.goals (user_id, title, description)
       VALUES (${userId}, ${goal.title}, ${goal.description})
       RETURNING id, title, description
     `;
-        return newGoal as Goal;
-    },
+    return newGoal as Goal;
+  },
 
-    async deleteGoal(goalId: string): Promise<void> {
-        await sql`DELETE FROM public.goals WHERE id = ${goalId}`;
-    }
+  async deleteGoal(goalId: string): Promise<void> {
+    await sql`DELETE FROM public.goals WHERE id = ${goalId}`;
+  }
 };
